@@ -27,7 +27,8 @@ def main():
         obs_cfg=obs_cfg,
         reward_cfg=reward_cfg,
         command_cfg=command_cfg,
-        show_viewer=True,
+        show_viewer=False,
+        isEval=True,
     )
 
     runner = OnPolicyRunner(env, train_cfg, log_dir, device="cuda:0")
@@ -37,9 +38,10 @@ def main():
 
     obs, _ = env.reset()
     with torch.no_grad():
-        while True:
+        for i in range(720):
             actions = policy(obs)
             obs, _, rews, dones, infos = env.step(actions)
+        env.cam.stop_recording(save_to_filename='go2.mp4')
 
 
 if __name__ == "__main__":

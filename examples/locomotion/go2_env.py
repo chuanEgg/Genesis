@@ -7,17 +7,15 @@ from genesis.utils.geom import quat_to_xyz, transform_by_quat, inv_quat, transfo
 def gs_rand_float(lower, upper, shape, device):
     return (upper - lower) * torch.rand(size=shape, device=device) + lower
 
-
 class Go2Env:
-    def __init__(self, num_envs, env_cfg, obs_cfg, reward_cfg, command_cfg, show_viewer=False, device="cuda"):
+    def __init__(self, num_envs, env_cfg, obs_cfg, reward_cfg, command_cfg, show_viewer=False, device="cuda", isEval=False):
         self.device = torch.device(device)
-
         self.num_envs = num_envs
         self.num_obs = obs_cfg["num_obs"]
         self.num_privileged_obs = None
         self.num_actions = env_cfg["num_actions"]
         self.num_commands = command_cfg["num_commands"]
-
+        self.isEval = isEval
         self.simulate_action_latency = True  # there is a 1 step latency on real robot
         self.dt = 0.02  # control frequency on real robot is 50hz
         self.max_episode_length = math.ceil(env_cfg["episode_length_s"] / self.dt)
@@ -48,9 +46,16 @@ class Go2Env:
             ),
             show_viewer=show_viewer,
         )
-
+        if self.isEval:
+            self.cam = self.scene.add_camera(
+                res = (1280, 960),
+                pos = (2.0, 0.0, 2.5),
+                lookat = (0.0, 0.0, 0.5),
+                fov = 40,
+            )
         # add plain
         self.scene.add_entity(gs.morphs.URDF(file="urdf/plane/plane.urdf", fixed=True))
+        # self.scene.add_entity(gs.morphs.Terrain(pos = (-60.0, -60.0, 0), subterrain_types = 'random_uniform_terrain', n_subterrains = (10,10)))
 
         # add robot
         self.base_init_pos = torch.tensor(self.env_cfg["base_init_pos"], device=self.device)
@@ -111,6 +116,9 @@ class Go2Env:
             dtype=gs.tc_float,
         )
         self.extras = dict()  # extra information for logging
+
+        if self.isEval:
+            self.cam.start_recording()
 
     def _resample_commands(self, envs_idx):
         self.commands[envs_idx, 0] = gs_rand_float(*self.command_cfg["lin_vel_x_range"], (len(envs_idx),), self.device)
@@ -179,6 +187,10 @@ class Go2Env:
 
         self.last_actions[:] = self.actions[:]
         self.last_dof_vel[:] = self.dof_vel[:]
+
+        if self.isEval:
+            self.cam.set_pose(lookat = self.robot.get_pos().cpu())
+            self.cam.render()
 
         return self.obs_buf, None, self.rew_buf, self.reset_buf, self.extras
 
