@@ -8,7 +8,7 @@ NUM_VERTS_Y = int(100 / TRIANGLE_SIZE)
 totalVerts = NUM_VERTS_X * NUM_VERTS_Y
 totalTriangles = 2 * (NUM_VERTS_X - 1) * (NUM_VERTS_Y - 1)
 offset = -50.0
-waveheight = 0.5
+waveheight = 0.15
 gGroundVertices = [None] * totalVerts * 3
 gGroundIndices = [None] * totalTriangles * 3
 

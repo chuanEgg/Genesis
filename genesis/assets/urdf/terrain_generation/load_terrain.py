@@ -1,4 +1,6 @@
 import genesis as gs
+import numpy as np
+
 gs.init(backend=gs.cuda)
 
 scene = gs.Scene(
@@ -18,18 +20,40 @@ scene = gs.Scene(
     plane_reflection = True,
     ambient_light = (0.1, 0.1, 0.1),
   ),
+  # rigid_options=gs.options.RigidOptions(
+  #   dt = 0.01,
+  #   constraint_solver=gs.constraint_solver.Newton,
+  # )
   renderer = gs.renderers.Rasterizer(),
 )
 
-terrain = scene.add_entity(gs.morphs.URDF(file='terrain_test.urdf', fixed=True))
+# terrain = scene.add_entity(
+#   gs.morphs.URDF(
+#     file='terrain_test.urdf',
+#     fixed=True,
+#     convexify=False, 
+#   )
+# )
 # terrain = scene.add_entity(gs.morphs.URDF(file='terrain.urdf', fixed=True))
-
 # plane = scene.add_entity(gs.morphs.Plane())
 # plane = scene.add_entity(gs.morphs.URDF(file='urdf/plane/plane.urdf', fixed=True))
+horizontal_scale = 0.25
+vertical_scale = 0.005
+height_field = np.zeros([100, 100])
+heights_range = np.arange(-10, 20, 10)
+height_field[10:90, 10:90] = 200 + np.random.choice(heights_range, (80, 80))
+terrain = scene.add_entity(
+    morph=gs.morphs.Terrain(
+        horizontal_scale=horizontal_scale,
+        vertical_scale=vertical_scale,
+        height_field=height_field,
+        pos = (-12, -12, -1)
+    )
+)
 dog = scene.add_entity(
   gs.morphs.URDF(
     file="urdf/go2/urdf/go2.urdf",
-    pos = (0, 0, 0.1),
+    pos = (0, 0, 1),
     quat = (1, 0, 0, 0),
   ),
 )
