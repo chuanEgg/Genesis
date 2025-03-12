@@ -33,7 +33,7 @@ class Go2Env:
             sim_options=gs.options.SimOptions(dt=self.dt, substeps=2),
             viewer_options=gs.options.ViewerOptions(
                 max_FPS=int(0.5 / self.dt),
-                camera_pos=(2.0, 0.0, 2.5),
+                camera_pos=(5.0, 5.0, 1.5),
                 camera_lookat=(0.0, 0.0, 0.5),
                 camera_fov=40,
             ),
@@ -49,12 +49,13 @@ class Go2Env:
         if self.isEval:
             self.cam = self.scene.add_camera(
                 res = (1280, 960),
-                pos = (2.0, 0.0, 2.5),
+                pos = (5.0, 5.0, 1.5),
                 lookat = (0.0, 0.0, 0.5),
                 fov = 40,
             )
-        # add plain
-        self.scene.add_entity(gs.morphs.URDF(file="urdf/plane/plane.urdf", fixed=True))
+        # add plane
+        # self.scene.add_entity(gs.morphs.URDF(file="urdf/plane/plane.urdf", fixed=True))
+        self.scene.add_entity(gs.morphs.URDF(file="urdf/terrain_generation/terrain_test.urdf", fixed=True))
         # self.scene.add_entity(gs.morphs.Terrain(pos = (-60.0, -60.0, 0), subterrain_types = 'random_uniform_terrain', n_subterrains = (10,10)))
 
         # add robot
