@@ -243,6 +243,18 @@ def parse_visual_and_col_mesh(morph, surface):
             tmeshes.append(vm.trimesh)
         tmesh = trimesh.util.concatenate(tmeshes)
 
+        num_vertices = len(tmesh.vertices)
+        if num_vertices > 5000:
+            gs.logger.warning(
+                f"Mesh '{morph.file}' contains many vertices ({num_vertices}). Consider setting "
+                "'morph.decimate=True' to speed up collision detection."
+            )
+        if not tmesh.is_convex and not (morph.convexify or morph.decompose_nonconvex):
+            gs.logger.warning(
+                f"Mesh '{morph.file}' is non-convex. Consider setting 'morph.decompose_nonconvex=True' "
+                "or 'morph.convexify=True' to speed up collision detection."
+            )
+
         if morph.convexify or tmesh.is_convex or not morph.decompose_nonconvex:
             ms.append(
                 gs.Mesh.from_trimesh(
@@ -522,16 +534,18 @@ def parse_mesh_glb(path, group_by_material, scale, surface):
                 texture = glb.textures[material.normalTexture.index]
                 uvs_used = material.normalTexture.texCoord
                 image_index = texture.source
-                image = Image.open(uri_to_PIL(glb.images[image_index].uri))
-                normal_texture = create_texture(np.array(image), None, "linear")
+                if image_index is not None:
+                    image = Image.open(uri_to_PIL(glb.images[image_index].uri))
+                    normal_texture = create_texture(np.array(image), None, "linear")
 
             # TODO: Parse occlusion
             if material.occlusionTexture is not None:
                 texture = glb.textures[material.normalTexture.index]
                 uvs_used = material.normalTexture.texCoord
                 image_index = texture.source
-                image = Image.open(uri_to_PIL(glb.images[image_index].uri))
-                occlusion_texture = create_texture(np.array(image), None, "linear")
+                if image_index is not None:
+                    image = Image.open(uri_to_PIL(glb.images[image_index].uri))
+                    occlusion_texture = create_texture(np.array(image), None, "linear")
 
             # parse alpha mode
             if material.alphaMode == "OPAQUE":
@@ -552,14 +566,15 @@ def parse_mesh_glb(path, group_by_material, scale, surface):
                     texture = glb.textures[pbr_texture.metallicRoughnessTexture.index]
                     uvs_used = pbr_texture.metallicRoughnessTexture.texCoord
                     image_index = texture.source
-                    image = Image.open(uri_to_PIL(glb.images[image_index].uri))
-                    bands = image.split()
-                    if len(bands) == 1:
-                        roughness_image = np.array(bands[0])
-                    else:
-                        roughness_image = np.array(bands[1])  # G for roughness
-                        metallic_image = np.array(bands[2])  # B for metallic
-                        # metallic_image = np.array(bands[0])     # R for metallic????
+                    if image_index is not None:
+                        image = Image.open(uri_to_PIL(glb.images[image_index].uri))
+                        bands = image.split()
+                        if len(bands) == 1:
+                            roughness_image = np.array(bands[0])
+                        else:
+                            roughness_image = np.array(bands[1])  # G for roughness
+                            metallic_image = np.array(bands[2])  # B for metallic
+                            # metallic_image = np.array(bands[0])     # R for metallic????
 
                 metallic_factor = None
                 if pbr_texture.metallicFactor is not None:
@@ -578,8 +593,9 @@ def parse_mesh_glb(path, group_by_material, scale, surface):
                     texture = glb.textures[pbr_texture.baseColorTexture.index]
                     uvs_used = pbr_texture.baseColorTexture.texCoord
                     image_index = texture.source
-                    image = Image.open(uri_to_PIL(glb.images[image_index].uri))
-                    color_image = np.array(image.convert("RGBA"))
+                    if image_index is not None:
+                        image = Image.open(uri_to_PIL(glb.images[image_index].uri))
+                        color_image = np.array(image.convert("RGBA"))
 
                 # parse color
                 color_factor = None
@@ -634,10 +650,11 @@ def parse_mesh_glb(path, group_by_material, scale, surface):
                     texture = glb.textures[material.emissiveTexture.index]
                     uvs_used = material.emissiveTexture.texCoord
                     image_index = texture.source
-                    image = Image.open(uri_to_PIL(glb.images[image_index].uri))
-                    if image.mode != "RGB":
-                        image = image.convert("RGB")
-                    emissive_image = np.array(image)
+                    if image_index is not None:
+                        image = Image.open(uri_to_PIL(glb.images[image_index].uri))
+                        if image.mode != "RGB":
+                            image = image.convert("RGB")
+                        emissive_image = np.array(image)
 
                 emissive_factor = None
                 if material.emissiveFactor is not None:
@@ -1020,7 +1037,7 @@ def create_cylinder(radius, height, sections=None, color=(1.0, 1.0, 1.0, 1.0)):
     return mesh
 
 
-def create_plane(size=1000, color=None, normal=(0, 0, 1)):
+def create_plane(size=1e3, color=None, normal=(0, 0, 1)):
     thickness = 1e-2  # for safety
     mesh = trimesh.creation.box(extents=[size, size, thickness])
     mesh.vertices[:, 2] -= thickness / 2
